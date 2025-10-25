@@ -1,44 +1,28 @@
 package repository;
 
-import exception.DaoException;
+import exception.CurrencyNotFoundException;
 import model.Currencies;
 import util.ConnectionManager;
 
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static util.queries.CurrenciesQueries.FIND_ALL_SQL;
+import static util.queries.CurrenciesQueries.DELETE_SQL;
+import static util.queries.CurrenciesQueries.SAVE_SQL;
+import static util.queries.CurrenciesQueries.UPDATE_SQL;
+import static util.queries.CurrenciesQueries.FIND_BY_ID_SQL;
+import static util.queries.CurrenciesQueries.FIND_BY_CODE_SQL;
+
 public class CurrenciesRepository {
 
     private static final CurrenciesRepository INSTANSE = new CurrenciesRepository();
-    private static final String DELETE_SQL = """
-            DELETE FROM currencies
-            WHERE id = ?
-            """;
-    private static final String SAVE_SQL = """
-            INSERT INTO currencies(code, fullname, sign) 
-            VALUES (?, ?, ?)
-            """;
-
-    private static final String UPDATE_SQL = """
-            UPDATE currencies
-            SET code = ?,
-                fullname = ?,
-                sign = ?
-            WHERE id = ?
-            """;
-
-    private static final String FIND_BY_ID_SQL = """
-            SELECT id, code, fullname, sign
-            FROM currencies
-            WHERE id = ?
-            """;
-
-    private static final String FIND_ALL_SQL = """
-            SELECT id, code, fullname, sign
-            FROM currencies
-            """;
 
     public CurrenciesRepository() {
     }
@@ -53,9 +37,10 @@ public class CurrenciesRepository {
                 currency = buildCurrency(resultSet);
                 currencies.add(currency);
             }
+
             return currencies;
         } catch (SQLException e) {
-            throw new DaoException(e);
+            throw new CurrencyNotFoundException(e.getMessage());
         }
     }
 
@@ -68,9 +53,26 @@ public class CurrenciesRepository {
             if (resultSet.next()) {
                 currency = buildCurrency(resultSet);
             }
+
             return Optional.ofNullable(currency);
         } catch (SQLException e) {
-            throw new DaoException(e);
+            throw new CurrencyNotFoundException(e.getMessage());
+        }
+    }
+
+    public Optional<Currencies> findByCode (String code) {
+        try (Connection connection = ConnectionManager.open();
+             PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_CODE_SQL)) {
+            preparedStatement.setString(1, code);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            Currencies currency = null;
+            if (resultSet.next()) {
+                currency = buildCurrency(resultSet);
+            }
+
+            return Optional.ofNullable(currency);
+        } catch (SQLException e) {
+            throw new CurrencyNotFoundException(e.getMessage());
         }
     }
 
@@ -82,7 +84,7 @@ public class CurrenciesRepository {
             preparedStatement.setString(3, currencies.getCode());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new DaoException(e);
+            throw new CurrencyNotFoundException(e.getMessage());
         }
     }
 
@@ -102,7 +104,7 @@ public class CurrenciesRepository {
 
             return currencies;
         } catch (SQLException e) {
-            throw new DaoException(e);
+            throw new CurrencyNotFoundException(e.getMessage());
         }
     }
 
@@ -113,11 +115,12 @@ public class CurrenciesRepository {
 
             return preparedStatement.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new DaoException(e);
+            throw new CurrencyNotFoundException(e.getMessage());
         }
     }
 
     private static Currencies buildCurrency(ResultSet resultSet) throws SQLException {
+
         return new Currencies(resultSet.getLong("id"),
                 resultSet.getString("code"),
                 resultSet.getString("fullname"),
