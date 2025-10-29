@@ -11,7 +11,7 @@ public class RepositoryRunner {
     public static void main(String[] args) {
 
         ExchangeService exchangeService = new ExchangeService();
-        double sum = exchangeService.getExchange("USD", "BYN", 100);
+        double sum = exchangeService.getExchange("RUn", "BYN", 100);
         System.out.println(sum);
 
 
